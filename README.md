@@ -184,7 +184,3 @@ The application will serve the React frontend from the Spring Boot backend on po
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
