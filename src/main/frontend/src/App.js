@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Add useRef
 import axios from 'axios';
 import './App.css';
 
@@ -19,6 +19,7 @@ function App() {
   });
   const [statusMessage, setStatusMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null); // Add a ref for the file input
 
   useEffect(() => {
     fetchInvestments();
@@ -65,14 +66,12 @@ function App() {
 
       await axios.post(`${API_BASE_URL}/api/investments`, investmentData);
       
-      // Reset form
       setFormData({
         date: new Date().toISOString().split('T')[0],
         amount: '',
         name: ''
       });
 
-      // Refresh data
       await fetchInvestments();
       await fetchStats();
       
@@ -104,21 +103,140 @@ function App() {
       return;
     }
 
+    // Define headers based on InvestmentDTO fields (excluding id)
+    const headers = ['Date', 'Amount', 'Name', 'Timestamp'];
     const csvContent = [
-      ['Date', 'Amount', 'Name', 'Timestamp'],
-      ...investments.map(inv => [inv.date, inv.amount, inv.name, inv.timestamp])
-    ].map(row => row.join(',')).join('\n');
+      headers.join(','),
+      ...investments.map(inv => [
+        inv.date,
+        inv.amount,
+        // Ensure names with commas are enclosed in double quotes
+        `"${inv.name.replace(/"/g, '""')}"`, 
+        inv.timestamp
+      ].join(','))
+    ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `investments_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
     showStatus('Data exported successfully! 📁', 'success');
   };
+
+  // Function to handle file selection and upload
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      showStatus('No file selected.', 'error');
+      return;
+    }
+
+    if (file.type !== 'text/csv') {
+      showStatus('Invalid file type. Please upload a CSV file.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      const csvContent = e.target.result;
+      const lines = csvContent.split('\n');
+      // Skip the header row and filter out any empty lines
+      const dataLines = lines.slice(1).filter(line => line.trim() !== ''); 
+      
+      const importedInvestments = [];
+      for (const line of dataLines) {
+        // More robust CSV parsing to handle commas within quoted fields
+        const values = [];
+        let currentVal = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                values.push(currentVal.trim());
+                currentVal = '';
+            } else {
+                currentVal += char;
+            }
+        }
+        values.push(currentVal.trim()); // Add the last value
+
+        if (values.length >= 3) { // Expecting at least Date, Amount, Name
+          const [date, amount, name, timestamp] = values; // Timestamp can be optional
+          const parsedAmount = parseFloat(amount);
+
+          if (!date || isNaN(parsedAmount) || !name) {
+            console.warn('Skipping invalid line:', line);
+            continue;
+          }
+          
+          importedInvestments.push({
+            date,
+            amount: parsedAmount,
+            name: name.replace(/^"|"$/g, '').replace(/""/g, '"'), // Remove surrounding quotes and unescape double quotes
+            // Timestamp is optional for import, the backend will assign a new one if not provided
+            ...(timestamp && { timestamp }) 
+          });
+        } else {
+          console.warn('Skipping malformed line (not enough columns):', line);
+        }
+      }
+
+      if (importedInvestments.length === 0 && dataLines.length > 0) {
+        showStatus('No valid investments found in the CSV file.', 'error');
+        setLoading(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""; // Reset file input
+        }
+        return;
+      }
+      
+      if (importedInvestments.length === 0) {
+        showStatus('No data to import.', 'info');
+        setLoading(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""; // Reset file input
+        }
+        return;
+      }
+
+      try {
+        const response = await axios.post(`${API_BASE_URL}/api/investments/import`, importedInvestments);
+        await fetchInvestments();
+        await fetchStats();
+        showStatus(`${response.data.importedCount} investments imported successfully! 📄`, 'success');
+      } catch (error) {
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error importing data';
+        showStatus(`Error importing data: ${errorMessage}`, 'error');
+      } finally {
+        setLoading(false);
+        // Reset the file input so the same file can be selected again if needed
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+      }
+    };
+
+    reader.onerror = () => {
+      showStatus('Error reading file.', 'error');
+      setLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Reset file input
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
 
   const showStatus = (message, type = 'info') => {
     setStatusMessage({ text: message, type });
@@ -134,7 +252,10 @@ function App() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    // Check if it's a full ISO string or just date part
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-'; // Invalid date
+    return date.toLocaleDateString();
   };
 
   return (
@@ -154,6 +275,7 @@ function App() {
           <div className="dashboard">
             <div className="card">
               <h2><span className="icon">+</span>Add Investment</h2>
+              {/* ... (existing form code) ... */}
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label htmlFor="date">Date</label>
@@ -201,6 +323,7 @@ function App() {
             <div className="card">
               <h2><span className="icon">📊</span>Quick Stats</h2>
               <div style={{ display: 'grid', gap: '15px' }}>
+                {/* ... (existing stats display code) ... */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: '#666' }}>Total Investments:</span>
                   <span style={{ fontWeight: '700', color: '#4facfe' }}>{stats.totalCount}</span>
@@ -213,8 +336,26 @@ function App() {
                   <span style={{ color: '#666' }}>Average Amount:</span>
                   <span style={{ fontWeight: '700', color: '#11998e' }}>{formatCurrency(stats.averageAmount)}</span>
                 </div>
-                <button type="button" className="btn btn-secondary" onClick={exportData}>
+                <button type="button" className="btn btn-secondary" onClick={exportData} style={{marginBottom: '10px'}}>
                   <span>📥</span> Export Data
+                </button>
+                {/* Add Import Button and File Input */}
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }} // Hide the default input
+                  ref={fileInputRef} // Assign the ref
+                  id="csvFileInput"
+                />
+                <button 
+                  type="button" 
+                  className="btn" 
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()} // Trigger file input click
+                  disabled={loading}
+                  style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}} // Different color for import
+                >
+                  <span>📤</span> {loading ? 'Importing...' : 'Import Data'}
                 </button>
               </div>
             </div>
@@ -227,6 +368,7 @@ function App() {
                 <span>🗑️</span> Clear All
               </button>
             </div>
+            {/* ... (existing investments list rendering code) ... */}
             <div className="investments-list">
               {investments.length === 0 ? (
                 <div className="empty-state">

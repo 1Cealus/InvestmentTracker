@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections; // Import Collections
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/investments")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000") // Or your frontend's actual origin in production
 public class InvestmentController {
     
     @Autowired
@@ -44,6 +45,32 @@ public class InvestmentController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // New endpoint for importing investments
+    @PostMapping("/import")
+    public ResponseEntity<?> importInvestments(@RequestBody List<InvestmentDTO> investmentDTOs) {
+        if (investmentDTOs == null || investmentDTOs.isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "No data to import."));
+        }
+        try {
+            List<InvestmentDTO> importedInvestments = investmentService.importInvestments(investmentDTOs);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", importedInvestments.size() + " investments imported successfully.");
+            response.put("importedCount", importedInvestments.size());
+            // Optionally, you could return the list of imported DTOs if needed by the frontend
+            // response.put("data", importedInvestments); 
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Validation error during import: " + e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            // Catch other potential exceptions during bulk save
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "An unexpected error occurred during import: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
     

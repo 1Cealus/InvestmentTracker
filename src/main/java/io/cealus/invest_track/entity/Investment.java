@@ -3,7 +3,7 @@ package io.cealus.invest_track.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalDateTime; // Ensure this is imported
 
 @Entity
 @Table(name = "investments")
@@ -23,18 +23,18 @@ public class Investment {
     private String name;
     
     @Column(nullable = false)
-    private LocalDateTime timestamp;
+    private LocalDateTime timestamp; // This will store the creation/import time
     
     // Constructors
     public Investment() {
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = LocalDateTime.now(); // Default timestamp to now
     }
     
     public Investment(LocalDate date, BigDecimal amount, String name) {
         this.date = date;
         this.amount = amount;
         this.name = name;
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = LocalDateTime.now(); // Default timestamp to now
     }
     
     // Getters and Setters

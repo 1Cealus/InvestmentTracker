@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime; // Import LocalDateTime
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -46,8 +48,41 @@ public class InvestmentService {
         }
         
         Investment investment = investmentDTO.toEntity();
+        // If timestamp is not provided in DTO, it will be set by the Investment entity's constructor
+        if (investmentDTO.getTimestamp() != null) {
+            investment.setTimestamp(investmentDTO.getTimestamp());
+        }
         Investment savedInvestment = investmentRepository.save(investment);
         return new InvestmentDTO(savedInvestment);
+    }
+
+    // New method for batch import
+    public List<InvestmentDTO> importInvestments(List<InvestmentDTO> investmentDTOs) {
+        List<Investment> investmentsToSave = new ArrayList<>();
+        for (InvestmentDTO dto : investmentDTOs) {
+            if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Invalid amount for investment: " + dto.getName());
+            }
+            if (dto.getName() == null || dto.getName().trim().isEmpty()) {
+                throw new IllegalArgumentException("Investment name is required for one of the entries.");
+            }
+            if (dto.getDate() == null) {
+                throw new IllegalArgumentException("Investment date is required for: " + dto.getName());
+            }
+            Investment investment = dto.toEntity();
+            // If timestamp is provided in DTO use it, otherwise the entity constructor sets it to now()
+            if (dto.getTimestamp() != null) {
+                investment.setTimestamp(dto.getTimestamp());
+            } else {
+                investment.setTimestamp(LocalDateTime.now()); // Ensure timestamp if not provided
+            }
+            investmentsToSave.add(investment);
+        }
+        
+        List<Investment> savedInvestments = investmentRepository.saveAll(investmentsToSave);
+        return savedInvestments.stream()
+                .map(InvestmentDTO::new)
+                .collect(Collectors.toList());
     }
     
     public Optional<InvestmentDTO> updateInvestment(Long id, InvestmentDTO investmentDTO) {
@@ -56,6 +91,10 @@ public class InvestmentService {
                     existingInvestment.setDate(investmentDTO.getDate());
                     existingInvestment.setAmount(investmentDTO.getAmount());
                     existingInvestment.setName(investmentDTO.getName());
+                    // Optionally update timestamp if provided, otherwise keep existing
+                    if (investmentDTO.getTimestamp() != null) {
+                        existingInvestment.setTimestamp(investmentDTO.getTimestamp());
+                    }
                     Investment updatedInvestment = investmentRepository.save(existingInvestment);
                     return new InvestmentDTO(updatedInvestment);
                 });
