@@ -1,0 +1,22 @@
+InvestmentTracker/
+src/
+├── main/
+│   ├── java/io/cealus/invest_track/
+│   │   ├── InvestmentTrackerApplication.java
+│   │   ├── entity/Investment.java
+│   │   ├── repository/InvestmentRepository.java
+│   │   ├── service/InvestmentService.java
+│   │   ├── controller/InvestmentController.java
+│   │   ├── dto/InvestmentDTO.java
+│   │   └── config/WebConfig.java
+│   ├── resources/
+│   │   └── application.properties
+│   └── frontend/
+│       ├── src/
+│       │   ├── App.js
+│       │   ├── App.css
+│       │   ├── index.js
+│       │   └── index.css
+│       ├── public/index.html
+│       └── package.json
+└── pom.xml
