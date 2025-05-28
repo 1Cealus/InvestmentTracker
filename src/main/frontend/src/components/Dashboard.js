@@ -1,7 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './Dashboard.css';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const initialFormData = {
   date: new Date().toISOString().split('T')[0],
@@ -14,13 +35,32 @@ const initialFormData = {
   amount: '0.00'
 };
 
+// Helper component for Sortable Table Headers
+const SortableHeader = ({ children, name, sortConfig, requestSort }) => {
+    const isSorted = sortConfig.key === name;
+    const directionIcon = isSorted ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : '';
+    return (
+        <button onClick={() => requestSort(name)} className="sortable-header">
+            {children}{directionIcon}
+        </button>
+    );
+};
+
+
 function Dashboard() {
   const [investments, setInvestments] = useState([]);
-  const [stats, setStats] = useState({ totalAmount: 0, averageAmount: 0, totalCount: 0, latestDate: null });
+  const [stats, setStats] = useState({ totalAmount: 0 });
   const [formData, setFormData] = useState(initialFormData);
   const [editingId, setEditingId] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isViewAllModalOpen, setViewAllModalOpen] = useState(false);
+  
+  // State for search and sort in the "View All" modal
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'descending' });
+
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -78,8 +118,7 @@ function Dashboard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
-    const submissionData = { ...formData };
+    const submissionData = { ...formData, amount: parseFloat(formData.amount) };
 
     try {
       if (editingId) {
@@ -89,7 +128,7 @@ function Dashboard() {
         await api.post('/api/investments', submissionData);
         showStatus('Investment added successfully! 🎉', 'success');
       }
-      handleCancelEdit();
+      closeAddModal();
       await fetchInvestments();
       await fetchStats();
     } catch (error) {
@@ -109,12 +148,7 @@ function Dashboard() {
       purchasePrice: investment.purchasePrice || '',
       notes: investment.notes || ''
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setFormData(initialFormData);
+    setAddModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -129,25 +163,47 @@ function Dashboard() {
       }
     }
   };
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormData(initialFormData);
+    setAddModalOpen(true);
+  };
+
+  const closeAddModal = () => {
+    setAddModalOpen(false);
+    setEditingId(null);
+    setFormData(initialFormData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
+
+  const showStatus = (message, type = 'info') => {
+    setStatusMessage({ text: message, type });
+    setTimeout(() => setStatusMessage(''), 4000);
+  };
   
   const exportData = () => {
     if (investments.length === 0) {
       showStatus('No data to export', 'error');
       return;
     }
-    const headers = ['id', 'name', 'date', 'category', 'symbol', 'quantity', 'purchasePrice', 'notes', 'timestamp'];
+    const headers = ['id', 'name', 'date', 'category', 'symbol', 'quantity', 'purchasePrice', 'amount', 'notes'];
     const csvContent = [
       headers.join(','),
       ...investments.map(inv => [
         inv.id,
         `"${(inv.name || '').replace(/"/g, '""')}"`,
-        inv.date,
+        inv.date.split('T')[0],
         inv.category,
         inv.symbol || '',
         inv.quantity || '',
         inv.purchasePrice || '',
+        inv.amount || '',
         `"${(inv.notes || '').replace(/"/g, '""')}"`,
-        inv.timestamp
       ].join(','))
     ].join('\n');
 
@@ -163,163 +219,220 @@ function Dashboard() {
     showStatus('Data exported successfully! 📁', 'success');
   };
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
 
-    setLoading(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const csvContent = e.target.result;
-      const lines = csvContent.split('\n').filter(line => line.trim() !== '');
-      if (lines.length <= 1) {
-        showStatus('No data found in file to import.', 'error');
-        setLoading(false);
-        return;
-      }
-      
-      const headers = lines[0].trim().split(',').map(h => h.toLowerCase());
-      const requiredHeaders = ['name', 'date', 'category', 'amount'];
-      
-      if (!requiredHeaders.every(h => headers.includes(h))) {
-          showStatus(`CSV must contain at least these headers: ${requiredHeaders.join(', ')}`, 'error');
-          setLoading(false);
-          return;
-      }
+  // Memoized and sorted investments for the main dashboard view
+  const sortedInvestments = useMemo(() => {
+      return [...investments].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [investments]);
 
-      const importedInvestments = lines.slice(1).map(line => {
-        const values = line.split(',');
-        const investmentData = headers.reduce((obj, header, index) => {
-            obj[header] = values[index] ? values[index].replace(/"/g, '') : null;
-            return obj;
-        }, {});
-        return investmentData;
-      });
+  // Chart Data Preparation
+  const recentForChart = useMemo(() => {
+    return [...investments]
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-5);
+  }, [investments]);
 
-      try {
-        await api.post('/api/investments/import', importedInvestments);
-        showStatus(`${importedInvestments.length} investments imported successfully! 📄`, 'success');
-        await fetchInvestments();
-        await fetchStats();
-      } catch (error) {
-        handleApiError(error, 'Error importing data.');
-      } finally {
-        setLoading(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-    };
-    reader.readAsText(file);
+  const chartData = {
+    labels: recentForChart.map(inv => inv.date.split('T')[0]),
+    datasets: [
+      {
+        label: 'Investment Amount ($)',
+        data: recentForChart.map(inv => inv.amount),
+        fill: true,
+        backgroundColor: 'rgba(80, 227, 194, 0.2)',
+        borderColor: '#50E3C2',
+        tension: 0.3
+      },
+    ],
   };
-  
-  const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to delete ALL of your investments? This action cannot be undone.')) {
-      try {
-        await api.delete('/api/investments');
-        showStatus('All investments have been deleted.', 'info');
-        fetchInvestments();
-        fetchStats();
-      } catch (error) {
-        handleApiError(error, 'Failed to delete all investments.');
-      }
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { ticks: { color: '#b0b0b0' } },
+        y: { ticks: { color: '#b0b0b0' } }
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+  // Logic for filtering and sorting the "View All" modal list
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setSortConfig({ key, direction });
   };
 
-  const showStatus = (message, type = 'info') => {
-    setStatusMessage({ text: message, type });
-    setTimeout(() => setStatusMessage(''), 4000);
-  };
+  const filteredAndSortedInvestments = useMemo(() => {
+    let sortableItems = [...investments];
+    
+    // Filtering
+    if (searchTerm) {
+        sortableItems = sortableItems.filter(item => 
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.date.split('T')[0].includes(searchTerm)
+        );
+    }
+    
+    // Sorting
+    sortableItems.sort((a, b) => {
+        const aVal = a[sortConfig.key];
+        const bVal = b[sortConfig.key];
 
-  const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+        if (aVal < bVal) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aVal > bVal) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+    });
+
+    return sortableItems;
+  }, [investments, searchTerm, sortConfig]);
+
 
   return (
     <div className="App">
       <div className="container">
-        <div className="header">
+        <header className="header">
           <h1>💰 Investment Tracker Pro</h1>
-          <button onClick={handleLogout} className="btn btn-secondary" style={{position: 'absolute', top: '30px', right: '30px', background: '#c83a54'}}>Logout</button>
-        </div>
-
-        <div className="main-content">
-          <div className="total-display">
-            <h3>Total Portfolio Value</h3>
-            <div className="total-amount">{formatCurrency(stats.totalAmount)}</div>
+          <div className="header-actions">
+            <button className="btn" onClick={openAddModal}>+ Add Investment</button>
+            <button onClick={handleLogout} className="btn btn-secondary" style={{ background: '#c83a54' }}>Logout</button>
           </div>
+        </header>
 
-          <div className="dashboard">
-            <div className="card full-width">
-              <h2><span className="icon">{editingId ? '✏️' : '+'}</span>{editingId ? 'Edit Investment' : 'Add New Investment'}</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="form-grid">
-                    <div className="form-group"><label htmlFor="name">Investment Name</label><input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Apple Stock" required/></div>
-                    <div className="form-group"><label htmlFor="date">Purchase Date</label><input type="date" id="date" name="date" value={formData.date} onChange={handleInputChange} required/></div>
-                    <div className="form-group"><label htmlFor="category">Category</label><select id="category" name="category" value={formData.category} onChange={handleInputChange} required>{categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
-                    <div className="form-group"><label htmlFor="symbol">Symbol/Ticker</label><input type="text" id="symbol" name="symbol" value={formData.symbol} onChange={handleInputChange} placeholder="e.g., AAPL, BTC"/></div>
-                    <div className="form-group"><label htmlFor="quantity">Quantity</label><input type="number" id="quantity" name="quantity" step="any" min="0" value={formData.quantity} onChange={handleInputChange} placeholder="e.g., 10"/></div>
-                    <div className="form-group"><label htmlFor="purchasePrice">Price Per Unit ($)</label><input type="number" id="purchasePrice" name="purchasePrice" step="any" min="0" value={formData.purchasePrice} onChange={handleInputChange} placeholder="e.g., 150.25"/></div>
-                    <div className="form-group full-width"><label htmlFor="notes">Notes</label><textarea id="notes" name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Any additional details..."></textarea></div>
-                    <div className="form-group full-width"><label>Total Amount ($)</label><input type="text" value={formatCurrency(formData.amount)} disabled readOnly/></div>
+        <main className="main-content">
+          <div id="total-portfolio" className="card">
+            <h2><span className="icon">💼</span>Total Portfolio Value</h2>
+            <div className="total-amount">{formatCurrency(stats.totalAmount)}</div>
+             <div style={{ marginTop: '20px' }}>
+                <p>Quick Actions:</p>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button type="button" className="btn import-btn" onClick={() => fileInputRef.current.click()} disabled={loading}>
+                        <span>📤</span> {loading ? 'Importing...' : 'Import'}
+                    </button>
+                    <input type="file" accept=".csv" style={{ display: 'none' }} ref={fileInputRef} id="csvFileInput"/>
+                    <button type="button" className="btn" onClick={exportData}>
+                        <span>📥</span> Export
+                    </button>
+                    <button type="button" className="btn clear-btn">
+                        <span>🗑️</span> Clear All
+                    </button>
                 </div>
-                <div className="form-actions">
-                  <button type="submit" className="btn" disabled={loading}><span>{editingId ? '💾 Update Investment' : '💾 Add Investment'}</span></button>
-                  {editingId && (<button type="button" className="btn btn-secondary" onClick={handleCancelEdit} disabled={loading}><span>❌ Cancel Edit</span></button>)}
-                </div>
-              </form>
             </div>
           </div>
 
-          <div className="card quick-actions-card">
-            <h2><span className="icon">⚡</span>Quick Actions</h2>
-            <button type="button" className="btn" onClick={exportData}>
-                <span>📥</span> Export Data to CSV
-            </button>
-            <input type="file" accept=".csv" onChange={handleFileUpload} style={{ display: 'none' }} ref={fileInputRef} id="csvFileInput"/>
-            <button type="button" className="btn import-btn" onClick={() => fileInputRef.current.click()} disabled={loading}>
-                <span>📤</span> {loading ? 'Importing...' : 'Import Data from CSV'}
-            </button>
-            <button type="button" className="btn clear-btn" onClick={handleClearAll}>
-                <span>🗑️</span> Clear All Investments
-            </button>
+          <div id="investment-chart" className="card">
+            <h2><span className="icon">📊</span>Recent Investment Trend</h2>
+            <div style={{ height: '250px' }}>
+                <Line options={chartOptions} data={chartData} />
+            </div>
           </div>
 
-          <div className="investments-section">
+          <div id="investment-history" className="card">
             <div className="investments-header">
-              <h2><span className="icon">📈</span>Investment History</h2>
+              <h2><span className="icon">📈</span>Recent Investment History</h2>
+              <button className="btn btn-secondary" onClick={() => setViewAllModalOpen(true)}>View All</button>
             </div>
             <div className="investments-list">
-              {investments.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-state-icon">📊</div><h3>No investments yet</h3><p>Start by adding your first investment above!</p>
-                </div>
+              {sortedInvestments.length === 0 ? (
+                <div className="empty-state"><div className="empty-state-icon">📊</div><h3>No investments yet</h3><p>Start by adding your first investment!</p></div>
               ) : (
-                investments.map((investment) => (
+                sortedInvestments.slice(0, 5).map((investment) => (
                   <div key={investment.id} className="investment-item">
-                    <div className="investment-main-info">
-                      <span className="investment-name">{investment.name} ({investment.symbol ? investment.symbol.toUpperCase() : 'N/A'})</span>
-                      <span className="investment-amount">{formatCurrency(investment.amount)}</span>
-                    </div>
+                    <span className="investment-name">{investment.name} ({investment.symbol ? investment.symbol.toUpperCase() : 'N/A'})</span>
+                    <span className="investment-category">{investment.category}</span>
+                    <span className="investment-date">{investment.date ? investment.date.split('T')[0] : 'N/A'}</span>
+                    <span className="investment-amount-display">{formatCurrency(investment.amount)}</span>
                     <div className="investment-actions">
                       <button onClick={() => handleEdit(investment)} className="action-btn edit-btn" title="Edit">✏️</button>
                       <button onClick={() => handleDelete(investment.id)} className="action-btn delete-btn" title="Delete">🗑️</button>
-                    </div>
-                    <div className="investment-details">
-                      <span className="detail-item"><strong>Date:</strong> {investment.date ? investment.date.split('T')[0] : 'N/A'}</span>
-                      <span className="detail-item"><strong>Category:</strong> {investment.category}</span>
-                      {investment.quantity != null && <span className="detail-item"><strong>Qty:</strong> {investment.quantity}</span>}
-                      {investment.purchasePrice != null && <span className="detail-item"><strong>Price:</strong> {formatCurrency(investment.purchasePrice)}</span>}
-                      {investment.notes && <span className="detail-item full-width"><strong>Notes:</strong> {investment.notes}</span>}
                     </div>
                   </div>
                 ))
               )}
             </div>
           </div>
-        </div>
+        </main>
       </div>
+
+      {isAddModalOpen && (
+        <div className="modal-overlay" onClick={closeAddModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{editingId ? 'Edit Investment' : 'Add New Investment'}</h2>
+              <button onClick={closeAddModal} className="close-modal-btn">×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="form-grid">
+                <div className="form-group"><label htmlFor="name">Investment Name</label><input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Apple Stock" required/></div>
+                <div className="form-group"><label htmlFor="date">Purchase Date</label><input type="date" id="date" name="date" value={formData.date} onChange={handleInputChange} required/></div>
+                <div className="form-group"><label htmlFor="category">Category</label><select id="category" name="category" value={formData.category} onChange={handleInputChange} required>{categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
+                <div className="form-group"><label htmlFor="symbol">Symbol/Ticker</label><input type="text" id="symbol" name="symbol" value={formData.symbol} onChange={handleInputChange} placeholder="e.g., AAPL, BTC"/></div>
+                <div className="form-group"><label htmlFor="quantity">Quantity</label><input type="number" id="quantity" name="quantity" step="any" min="0" value={formData.quantity} onChange={handleInputChange} placeholder="e.g., 10"/></div>
+                <div className="form-group"><label htmlFor="purchasePrice">Price Per Unit ($)</label><input type="number" id="purchasePrice" name="purchasePrice" step="any" min="0" value={formData.purchasePrice} onChange={handleInputChange} placeholder="e.g., 150.25"/></div>
+                <div className="form-group full-width"><label htmlFor="notes">Notes</label><textarea id="notes" name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Any additional details..."></textarea></div>
+                <div className="form-group full-width"><label>Total Amount ($)</label><input type="text" value={formatCurrency(formData.amount)} disabled readOnly/></div>
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn btn-secondary" onClick={closeAddModal}>Cancel</button>
+                <button type="submit" className="btn" disabled={loading}>{editingId ? 'Update' : 'Add'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isViewAllModalOpen && (
+        <div className="modal-overlay comprehensive-list-modal" onClick={() => setViewAllModalOpen(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>All Investments</h2>
+                    <input 
+                        type="text" 
+                        placeholder="Search by name or date..." 
+                        className="form-group-input" 
+                        style={{marginLeft: '20px', width: '300px'}}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <button onClick={() => setViewAllModalOpen(false)} className="close-modal-btn" style={{marginLeft: 'auto'}}>×</button>
+                </div>
+                
+                <div className="investments-list-header" style={{display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '20px', padding: '10px 20px', borderBottom: '2px solid #444', fontWeight: 'bold'}}>
+                    <SortableHeader name="name" sortConfig={sortConfig} requestSort={requestSort}>Name</SortableHeader>
+                    <SortableHeader name="category" sortConfig={sortConfig} requestSort={requestSort}>Category</SortableHeader>
+                    <SortableHeader name="date" sortConfig={sortConfig} requestSort={requestSort}>Date</SortableHeader>
+                    <span style={{textAlign: 'right'}}><SortableHeader name="amount" sortConfig={sortConfig} requestSort={requestSort}>Amount</SortableHeader></span>
+                    <span style={{textAlign: 'right'}}>Actions</span>
+                </div>
+                
+                <div className="investments-list" style={{maxHeight: '60vh', overflowY: 'auto'}}>
+                    {filteredAndSortedInvestments.length > 0 ? (
+                        filteredAndSortedInvestments.map(investment => (
+                            <div key={investment.id} className="investment-item">
+                                <span className="investment-name">{investment.name}</span>
+                                <span className="investment-category">{investment.category}</span>
+                                <span className="investment-date">{investment.date.split('T')[0]}</span>
+                                <span className="investment-amount-display">{formatCurrency(investment.amount)}</span>
+                                <div className="investment-actions">
+                                    <button onClick={() => { setViewAllModalOpen(false); handleEdit(investment); }} className="action-btn edit-btn" title="Edit">✏️</button>
+                                    <button onClick={() => handleDelete(investment.id)} className="action-btn delete-btn" title="Delete">🗑️</button>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p style={{textAlign: 'center', padding: '20px'}}>No investments match your search.</p>
+                    )}
+                </div>
+            </div>
+        </div>
+      )}
+
       {statusMessage && (<div className={`status-bar show ${statusMessage.type}`}>{statusMessage.text}</div>)}
     </div>
   );

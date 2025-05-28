@@ -13,7 +13,7 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1600px; /* Increased width to use more space */
   margin: 0 auto;
   background-color: #1e1e1e; /* Darker shade for the main container */
   border-radius: 20px;
@@ -28,43 +28,112 @@ body {
   color: #ffffff;
   position: relative;
   border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .header h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin: 0;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
 }
 
-.header p {
-  font-size: 1.1rem;
-  opacity: 0.8;
+.header-actions {
+  display: flex;
+  gap: 15px;
 }
 
 .main-content {
-  padding: 30px; /* Adjusted padding */
-}
-
-/* Layout for the main form and other sections */
-.dashboard {
+  padding: 30px;
   display: grid;
-  grid-template-columns: 1fr; /* Ensures the form card takes full width */
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
   gap: 30px;
-  margin-bottom: 30px;
+  grid-template-areas:
+    "total-portfolio investment-chart"
+    "investment-history investment-history";
 }
 
-.card {
-  background-color: #2a2a2a; /* Dark card background */
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background-color: #2a2a2a;
+  padding: 30px;
   border-radius: 15px;
-  padding: 30px; /* Increased padding */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 600px;
+  border: 1px solid #383838;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 15px;
+}
+
+.modal-header h2 {
+  font-size: 1.5rem;
+  color: #ffffff;
+  margin: 0;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  color: #b0b0b0;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  color: #ffffff;
+}
+
+/* Card for main sections */
+.card {
+  background-color: #2a2a2a;
+  border-radius: 15px;
+  padding: 30px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-  border: 1px solid #383838; /* Subtle border */
+  border: 1px solid #383838;
   color: #e0e0e0;
 }
 
+#total-portfolio {
+  grid-area: total-portfolio;
+}
+
+#investment-chart {
+  grid-area: investment-chart;
+}
+
+#investment-history {
+  grid-area: investment-history;
+}
+
 .card h2 {
-  font-size: 1.5rem; /* Larger heading */
+  font-size: 1.5rem;
+  margin-top: 0;
   margin-bottom: 25px;
   color: #ffffff;
   display: flex;
@@ -75,28 +144,34 @@ body {
 }
 
 .icon {
-  width: 28px; /* Slightly larger icon */
+  width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); /* Brighter accent for icons */
+  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1e1e1e; /* Dark icon color for contrast */
+  color: #1e1e1e;
   font-weight: bold;
   font-size: 1.1rem;
 }
 
-/* Form Specific Styles */
+/* Form Specific Styles (for modal) */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
 .form-group {
-  margin-bottom: 22px;
+  margin-bottom: 0;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 10px; /* Increased space */
-  font-weight: 500; /* Medium weight */
-  color: #b0b0b0; /* Lighter grey for labels */
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #b0b0b0;
   font-size: 0.95rem;
 }
 
@@ -104,66 +179,51 @@ body {
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 14px 18px; /* More padding */
+  padding: 14px 18px;
   border: 1px solid #444;
   border-radius: 10px;
   font-size: 1rem;
-  background-color: #333; /* Dark input background */
+  background-color: #333;
   color: #e0e0e0;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-    color: #777;
+  color: #777;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #4A90E2; /* Accent color for focus */
+  border-color: #4A90E2;
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
   background-color: #383838;
 }
 
 .form-group textarea {
-    min-height: 100px; /* Increased height */
-    resize: vertical;
-}
-
-.form-group input:disabled {
-    background-color: #404040;
-    color: #888;
-    cursor: not-allowed;
-}
-
-/* Form Grid for better space utilization */
-.form-grid {
-    display: grid;
-    /* Adjust minmax to control how many items fit per row based on available width */
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Increased min-width */
-    gap: 20px 25px; /* Row and column gap */
-    margin-bottom: 25px;
+  min-height: 100px;
+  resize: vertical;
 }
 
 .form-group.full-width {
-    grid-column: 1 / -1; /* Makes an element span all columns */
+  grid-column: 1 / -1;
 }
 
 .form-actions {
-    display: flex;
-    gap: 15px;
-    margin-top: 25px;
-    justify-content: flex-start; /* Align buttons to the start */
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+  justify-content: flex-end;
 }
 
 /* Button Styles */
 .btn {
-  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); /* Primary accent gradient */
-  color: #121212; /* Dark text on bright buttons */
+  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%);
+  color: #121212;
   border: none;
-  padding: 12px 28px; /* Adjusted padding */
+  padding: 12px 28px;
   border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
@@ -189,7 +249,7 @@ body {
 }
 
 .btn-secondary {
-  background: #444; /* Dark grey for secondary actions */
+  background: #444;
   color: #b0b0b0;
   border: 1px solid #555;
 }
@@ -197,112 +257,79 @@ body {
 .btn-secondary:hover:not(:disabled) {
   background: #555;
   color: #e0e0e0;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
 }
 
+.import-btn {
+  background: linear-gradient(135deg, #00ACC1 0%, #00796B 100%);
+  color: #ffffff;
+}
+
+.clear-btn {
+  background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+  color: #ffffff;
+}
 
 /* Total Display */
-.total-display {
-  text-align: center;
-  padding: 30px;
-  background: linear-gradient(135deg, #50E3C2 0%, #4A90E2 100%); /* Accent gradient */
-  border-radius: 15px;
-  color: #121212; /* Dark text on bright background */
-  margin-bottom: 30px;
-}
-
-.total-display h3 {
-  font-size: 1.3rem; /* Larger heading */
-  margin-bottom: 10px;
-  opacity: 0.9;
-  font-weight: 500;
-}
-
 .total-amount {
-  font-size: 3.2rem; /* Larger amount */
+  font-size: 3.2rem;
   font-weight: 700;
+  color: #50E3C2;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Investment History Section */
-.investments-section {
-  background-color: #2a2a2a;
-  border-radius: 15px;
-  padding: 30px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-  border: 1px solid #383838;
-}
-
 .investments-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 25px;
-  border-bottom: 1px solid #444;
-  padding-bottom: 15px;
 }
 
 .investments-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Increased gap */
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .investment-item {
   display: grid;
-  grid-template-columns: 1fr auto; /* Name/Amount | Actions */
-  grid-template-rows: auto auto;    /* Details below */
-  grid-template-areas:
-    "main-info actions"
-    "details details";
-  gap: 12px 20px; /* Adjusted gap */
-  padding: 20px;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 20px;
+  align-items: center;
+  padding: 15px 20px;
   border-radius: 12px;
-  border: 1px solid #383838;
-  background-color: #333; /* Slightly lighter than card for depth */
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  background-color: #333;
+  transition: background-color 0.3s ease;
 }
 
 .investment-item:hover {
-  border-color: #4A90E2; /* Accent color on hover */
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  background-color: #3a3a3a;
 }
 
-.investment-main-info {
-  grid-area: main-info;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.investment-name, .investment-category, .investment-date, .investment-amount-display {
+  font-size: 1rem;
 }
 
-.investment-name {
-  font-size: 1.2rem; /* Slightly larger */
-  font-weight: 600;
-  color: #ffffff;
-}
-
-.investment-amount {
-  font-size: 1.3rem; /* Slightly larger */
-  font-weight: 700;
-  color: #50E3C2; /* Accent color */
-}
+.investment-name { font-weight: 600; color: #ffffff; }
+.investment-category { color: #b0b0b0; }
+.investment-date { color: #a0a0a0; }
+.investment-amount-display { font-weight: 700; color: #50E3C2; text-align: right; }
 
 .investment-actions {
-  grid-area: actions;
   display: flex;
-  gap: 12px; /* Increased gap */
-  align-items: center; /* Vertically align buttons */
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .action-btn {
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 1.3rem; /* Larger icons */
-  padding: 6px;
+  font-size: 1.2rem;
+  padding: 5px;
   border-radius: 50%;
-  width: 40px; /* Larger touch target */
-  height: 40px;
+  width: 35px;
+  height: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -310,120 +337,156 @@ body {
   color: #b0b0b0;
 }
 
-.edit-btn:hover {
-  background-color: rgba(74, 144, 226, 0.15); /* Accent hover */
-  color: #4A90E2;
-}
-
-.delete-btn:hover {
-  background-color: rgba(229, 57, 53, 0.15); /* Red hover */
-  color: #e53935;
-}
-
-.investment-details {
-  grid-area: details;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 18px; /* Adjusted gap */
-  font-size: 0.9rem; /* Slightly larger */
-  color: #a0a0a0; /* Lighter grey for details */
-  padding-top: 15px;
-  margin-top: 15px;
-  border-top: 1px solid #444;
-}
-
-.detail-item {
-  background-color: #383838; /* Darker detail item background */
-  padding: 6px 12px; /* More padding */
-  border-radius: 8px;
-  border: 1px solid #484848;
-}
-
-.detail-item strong {
-  color: #d0d0d0; /* Light strong text */
-  font-weight: 500;
-}
-
-.detail-item.full-width {
-    width: 100%;
-    background-color: #353535;
-}
-
-/* Quick Actions Card */
-.quick-actions-card {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px; /* Increased gap */
-  margin-top: 30px;
-}
-
-.quick-actions-card h2 {
-  grid-column: 1 / -1; /* Title spans all columns */
-}
-
-.quick-actions-card .btn {
-  width: 100%;
-  justify-content: center;
-  padding: 12px 20px; /* Consistent padding */
-}
-
-.import-btn {
-    background: linear-gradient(135deg, #00ACC1 0%, #00796B 100%); /* Teal gradient */
-    color: #ffffff;
-}
-.import-btn:hover:not(:disabled) {
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-}
-
-.clear-btn {
-    background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%); /* Red gradient */
-    color: #ffffff;
-}
-.clear-btn:hover:not(:disabled) {
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-}
+.edit-btn:hover { background-color: rgba(74, 144, 226, 0.15); color: #4A90E2; }
+.delete-btn:hover { background-color: rgba(229, 57, 53, 0.15); color: #e53935; }
 
 /* Status Bar & Empty State */
 .status-bar {
   position: fixed;
-  bottom: 25px; /* Adjusted position */
+  bottom: 25px;
   right: 25px;
-  background: rgba(20, 20, 20, 0.9); /* Darker, slightly transparent */
+  background: rgba(20, 20, 20, 0.9);
   color: #e0e0e0;
-  padding: 12px 22px; /* Adjusted padding */
-  border-radius: 10px; /* Less rounded */
+  padding: 12px 22px;
+  border-radius: 10px;
   font-size: 0.95rem;
   backdrop-filter: blur(5px);
   opacity: 0;
   transform: translateY(20px);
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smoother transition */
-  z-index: 1000;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 1001;
   border: 1px solid #333;
 }
 
-.status-bar.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
+.status-bar.show { opacity: 1; transform: translateY(0); }
 .status-bar.success { background: rgba(76, 175, 80, 0.9); color: #ffffff; border-color: #4CAF50;}
 .status-bar.error { background: rgba(211, 47, 47, 0.9); color: #ffffff; border-color: #D32F2F;}
 .status-bar.info { background: rgba(33, 150, 243, 0.9); color: #ffffff; border-color: #2196F3;}
 
 .empty-state {
   text-align: center;
-  padding: 50px 20px; /* More padding */
+  padding: 50px 20px;
   color: #777;
 }
 
 .empty-state-icon {
-  font-size: 4.5rem; /* Larger icon */
+  font-size: 4.5rem;
   margin-bottom: 25px;
-  opacity: 0.2; /* More subtle */
+  opacity: 0.2;
 }
 
 .empty-state h3 {
-    color: #ccc;
-    font-size: 1.3rem;
-    margin-bottom: 10px;
+  color: #ccc;
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+}
+
+/* Comprehensive Investment List Modal */
+.comprehensive-list-modal .modal-content {
+  max-width: 1200px;
+}
+
+.comprehensive-list-modal .investment-item {
+  grid-template-columns: 2fr 1fr 1fr 1fr auto; /* Add more columns for details */
+}
+
+.comprehensive-list-modal .investment-details {
+  display: contents; /* Makes child elements behave as grid items */
+}
+
+/* Styles for the "View All" Modal's Header Row */
+.investments-list-header {
+  display: grid;
+  /* This MUST match the grid-template-columns of .investment-item */
+  grid-template-columns: 2fr 1fr 1fr 1fr auto; 
+  gap: 20px;
+  padding: 15px 20px;
+  border-bottom: 2px solid #4a4a4a; /* Stronger border for header */
+  font-weight: 600;
+  color: #c0c0c0;
+}
+
+/* Style for the individual sortable header buttons */
+.sortable-header {
+  background: none;
+  border: none;
+  color: #c0c0c0;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.sortable-header:hover {
+  color: #ffffff;
+}
+
+/* Aligning text in the header where necessary */
+.investments-list-header .sortable-header[name="amount"],
+.investments-list-header span:last-child {
+  text-align: right;
+}
+
+
+/* Styling for the search input in the modal header */
+.modal-header .form-group-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 15px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background-color: #1e1e1e; /* Match the darkest background */
+  color: #e0e0e0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.modal-header .form-group-input:focus {
+  outline: none;
+  border-color: #4A90E2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* Ensure the modal's list has a bit of space and scrollbar styling */
+.comprehensive-list-modal .investments-list {
+    margin-top: 10px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 10px; /* Space for scrollbar */
+}
+
+/* Webkit scrollbar styling for a modern look */
+.comprehensive-list-modal .investments-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.comprehensive-list-modal .investments-list::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.comprehensive-list-modal .investments-list::-webkit-scrollbar-thumb {
+  background-color: #555;
+  border-radius: 4px;
+  border: 2px solid #2a2a2a;
+}
+
+.comprehensive-list-modal .investments-list::-webkit-scrollbar-thumb:hover {
+  background-color: #777;
+}
+
+/* Applying the same grid layout to the items for alignment */
+.comprehensive-list-modal .investment-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    align-items: center;
+    border-bottom: 1px solid #383838;
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+.comprehensive-list-modal .investment-item:last-child {
+    border-bottom: none;
 }
