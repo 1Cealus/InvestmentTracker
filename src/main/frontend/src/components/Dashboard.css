@@ -1,0 +1,429 @@
+/* General Dark Theme Styles */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #121212; /* Very dark grey, near black */
+  color: #e0e0e0; /* Light grey text for readability */
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #1e1e1e; /* Darker shade for the main container */
+  border-radius: 20px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5); /* More pronounced shadow for dark theme */
+  overflow: hidden;
+}
+
+.header {
+  background: linear-gradient(135deg, #2C3E50 0%, #000000 100%); /* Dark blue to black gradient */
+  padding: 30px;
+  text-align: center;
+  color: #ffffff;
+  position: relative;
+  border-bottom: 1px solid #333;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+.header p {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+.main-content {
+  padding: 30px; /* Adjusted padding */
+}
+
+/* Layout for the main form and other sections */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr; /* Ensures the form card takes full width */
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.card {
+  background-color: #2a2a2a; /* Dark card background */
+  border-radius: 15px;
+  padding: 30px; /* Increased padding */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid #383838; /* Subtle border */
+  color: #e0e0e0;
+}
+
+.card h2 {
+  font-size: 1.5rem; /* Larger heading */
+  margin-bottom: 25px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 15px;
+}
+
+.icon {
+  width: 28px; /* Slightly larger icon */
+  height: 28px;
+  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); /* Brighter accent for icons */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e1e1e; /* Dark icon color for contrast */
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* Form Specific Styles */
+.form-group {
+  margin-bottom: 22px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px; /* Increased space */
+  font-weight: 500; /* Medium weight */
+  color: #b0b0b0; /* Lighter grey for labels */
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 14px 18px; /* More padding */
+  border: 1px solid #444;
+  border-radius: 10px;
+  font-size: 1rem;
+  background-color: #333; /* Dark input background */
+  color: #e0e0e0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #777;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4A90E2; /* Accent color for focus */
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+  background-color: #383838;
+}
+
+.form-group textarea {
+    min-height: 100px; /* Increased height */
+    resize: vertical;
+}
+
+.form-group input:disabled {
+    background-color: #404040;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* Form Grid for better space utilization */
+.form-grid {
+    display: grid;
+    /* Adjust minmax to control how many items fit per row based on available width */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Increased min-width */
+    gap: 20px 25px; /* Row and column gap */
+    margin-bottom: 25px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1; /* Makes an element span all columns */
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+    justify-content: flex-start; /* Align buttons to the start */
+}
+
+/* Button Styles */
+.btn {
+  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); /* Primary accent gradient */
+  color: #121212; /* Dark text on bright buttons */
+  border: none;
+  padding: 12px 28px; /* Adjusted padding */
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn:disabled {
+  background: #555;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-secondary {
+  background: #444; /* Dark grey for secondary actions */
+  color: #b0b0b0;
+  border: 1px solid #555;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #555;
+  color: #e0e0e0;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+
+/* Total Display */
+.total-display {
+  text-align: center;
+  padding: 30px;
+  background: linear-gradient(135deg, #50E3C2 0%, #4A90E2 100%); /* Accent gradient */
+  border-radius: 15px;
+  color: #121212; /* Dark text on bright background */
+  margin-bottom: 30px;
+}
+
+.total-display h3 {
+  font-size: 1.3rem; /* Larger heading */
+  margin-bottom: 10px;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.total-amount {
+  font-size: 3.2rem; /* Larger amount */
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Investment History Section */
+.investments-section {
+  background-color: #2a2a2a;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid #383838;
+}
+
+.investments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 15px;
+}
+
+.investments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Increased gap */
+}
+
+.investment-item {
+  display: grid;
+  grid-template-columns: 1fr auto; /* Name/Amount | Actions */
+  grid-template-rows: auto auto;    /* Details below */
+  grid-template-areas:
+    "main-info actions"
+    "details details";
+  gap: 12px 20px; /* Adjusted gap */
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #383838;
+  background-color: #333; /* Slightly lighter than card for depth */
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.investment-item:hover {
+  border-color: #4A90E2; /* Accent color on hover */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.investment-main-info {
+  grid-area: main-info;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.investment-name {
+  font-size: 1.2rem; /* Slightly larger */
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.investment-amount {
+  font-size: 1.3rem; /* Slightly larger */
+  font-weight: 700;
+  color: #50E3C2; /* Accent color */
+}
+
+.investment-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 12px; /* Increased gap */
+  align-items: center; /* Vertically align buttons */
+}
+
+.action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem; /* Larger icons */
+  padding: 6px;
+  border-radius: 50%;
+  width: 40px; /* Larger touch target */
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  color: #b0b0b0;
+}
+
+.edit-btn:hover {
+  background-color: rgba(74, 144, 226, 0.15); /* Accent hover */
+  color: #4A90E2;
+}
+
+.delete-btn:hover {
+  background-color: rgba(229, 57, 53, 0.15); /* Red hover */
+  color: #e53935;
+}
+
+.investment-details {
+  grid-area: details;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px; /* Adjusted gap */
+  font-size: 0.9rem; /* Slightly larger */
+  color: #a0a0a0; /* Lighter grey for details */
+  padding-top: 15px;
+  margin-top: 15px;
+  border-top: 1px solid #444;
+}
+
+.detail-item {
+  background-color: #383838; /* Darker detail item background */
+  padding: 6px 12px; /* More padding */
+  border-radius: 8px;
+  border: 1px solid #484848;
+}
+
+.detail-item strong {
+  color: #d0d0d0; /* Light strong text */
+  font-weight: 500;
+}
+
+.detail-item.full-width {
+    width: 100%;
+    background-color: #353535;
+}
+
+/* Quick Actions Card */
+.quick-actions-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px; /* Increased gap */
+  margin-top: 30px;
+}
+
+.quick-actions-card h2 {
+  grid-column: 1 / -1; /* Title spans all columns */
+}
+
+.quick-actions-card .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 20px; /* Consistent padding */
+}
+
+.import-btn {
+    background: linear-gradient(135deg, #00ACC1 0%, #00796B 100%); /* Teal gradient */
+    color: #ffffff;
+}
+.import-btn:hover:not(:disabled) {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.clear-btn {
+    background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%); /* Red gradient */
+    color: #ffffff;
+}
+.clear-btn:hover:not(:disabled) {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Status Bar & Empty State */
+.status-bar {
+  position: fixed;
+  bottom: 25px; /* Adjusted position */
+  right: 25px;
+  background: rgba(20, 20, 20, 0.9); /* Darker, slightly transparent */
+  color: #e0e0e0;
+  padding: 12px 22px; /* Adjusted padding */
+  border-radius: 10px; /* Less rounded */
+  font-size: 0.95rem;
+  backdrop-filter: blur(5px);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smoother transition */
+  z-index: 1000;
+  border: 1px solid #333;
+}
+
+.status-bar.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.status-bar.success { background: rgba(76, 175, 80, 0.9); color: #ffffff; border-color: #4CAF50;}
+.status-bar.error { background: rgba(211, 47, 47, 0.9); color: #ffffff; border-color: #D32F2F;}
+.status-bar.info { background: rgba(33, 150, 243, 0.9); color: #ffffff; border-color: #2196F3;}
+
+.empty-state {
+  text-align: center;
+  padding: 50px 20px; /* More padding */
+  color: #777;
+}
+
+.empty-state-icon {
+  font-size: 4.5rem; /* Larger icon */
+  margin-bottom: 25px;
+  opacity: 0.2; /* More subtle */
+}
+
+.empty-state h3 {
+    color: #ccc;
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+}

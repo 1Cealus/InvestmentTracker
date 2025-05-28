@@ -1,0 +1,224 @@
+/* src/main/frontend/src/Auth.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+.auth-background {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #121212; /* Very dark grey, near black */
+  /* Optional: Keep a subtle gradient if desired, or remove for solid dark */
+  /* background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); */
+  font-family: 'Poppins', sans-serif;
+  overflow: hidden;
+}
+
+.auth-container {
+  background-color: #1e1e1e; /* Darker shade for the auth container */
+  padding: 40px 35px;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
+  width: 100%;
+  max-width: 480px; /* Slightly wider for better spacing if needed */
+  text-align: center;
+  border: 1px solid #333; /* Subtle border */
+  transform: scale(1);
+  animation: fadeInScale 0.5s ease-out forwards;
+  color: #e0e0e0; /* Light text for readability */
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.landing-hero {
+  max-width: 550px;
+}
+
+.landing-hero .auth-logo,
+.auth-container .auth-logo {
+  font-size: 3rem; /* Larger logo/icon */
+  color: #4A90E2; /* Primary accent color */
+  margin-bottom: 25px;
+  line-height: 1;
+}
+
+.landing-hero h1 {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #ffffff; /* White for main headings */
+  margin-bottom: 20px;
+  line-height: 1.3;
+}
+
+.landing-hero p {
+  font-size: 1.1rem;
+  color: #b0b0b0; /* Lighter grey for paragraph text */
+  margin-bottom: 40px;
+  line-height: 1.7;
+}
+
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 18px; /* Increased gap */
+  justify-content: center;
+}
+
+@media (min-width: 450px) {
+  .landing-actions {
+    flex-direction: row;
+  }
+}
+
+.auth-container h2 {
+  font-size: 2.2rem;
+  margin-bottom: 35px;
+  color: #ffffff; /* White for form titles */
+  font-weight: 600;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25px; /* Increased gap */
+}
+
+.auth-input-group {
+  position: relative;
+  text-align: left;
+}
+
+.auth-input-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #b0b0b0;
+  margin-bottom: 10px;
+  padding-left: 5px;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 16px 20px; /* More padding */
+  border: 1px solid #444; /* Darker border */
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #e0e0e0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: #333; /* Dark input background */
+}
+
+.auth-input::placeholder {
+  color: #777; /* Placeholder text color */
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: #4A90E2; /* Accent color for focus */
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25);
+  background-color: #383838; /* Slightly lighter on focus */
+}
+
+.auth-button {
+  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); /* Primary accent gradient */
+  color: #121212; /* Dark text on bright buttons */
+  border: none;
+  padding: 16px 25px; /* More padding */
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 0.75px; /* Increased letter spacing */
+}
+
+.auth-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); /* Darker shadow for hover */
+}
+.auth-button:active:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+.auth-button:disabled {
+  background: #555;
+  color: #999;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.landing-actions .auth-button {
+  width: auto;
+  padding: 15px 40px; /* Adjusted padding for landing buttons */
+}
+
+.landing-actions .auth-button.secondary {
+    background: transparent;
+    color: #50E3C2; /* Accent color for secondary button text */
+    border: 2px solid #50E3C2; /* Accent color border */
+}
+.landing-actions .auth-button.secondary:hover {
+    background: #50E3C2;
+    color: #121212; /* Dark text on hover */
+    box-shadow: 0 8px 15px rgba(80, 227, 194, 0.2);
+}
+
+.auth-error {
+  color: #ff7675; /* Brighter, more visible red for errors */
+  background-color: rgba(255, 118, 117, 0.1);
+  padding: 12px 15px; /* More padding */
+  border-radius: 8px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 118, 117, 0.2);
+  text-align: left; /* Align error text to the left */
+}
+
+.auth-message {
+  color: #50E3C2; /* Accent green for success messages */
+  background-color: rgba(80, 227, 194, 0.1);
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border: 1px solid rgba(80, 227, 194, 0.2);
+  text-align: left;
+}
+
+.auth-toggle-link {
+  margin-top: 35px; /* More space above toggle link */
+  color: #a0a0a0; /* Lighter grey for less emphasis */
+  font-size: 0.95rem;
+}
+
+.auth-toggle-link a {
+  color: #4A90E2; /* Accent color for link */
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-toggle-link a:hover {
+  color: #50E3C2; /* Different accent on hover */
+  text-decoration: underline;
+}

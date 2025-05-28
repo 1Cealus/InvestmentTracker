@@ -2,6 +2,7 @@ package io.cealus.invest_track.service;
 
 import io.cealus.invest_track.dto.InvestmentDTO;
 import io.cealus.invest_track.entity.Investment;
+import io.cealus.invest_track.entity.User; 
 import io.cealus.invest_track.repository.InvestmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -9,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime; // Import LocalDateTime
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,19 +23,18 @@ public class InvestmentService {
     @Autowired
     private InvestmentRepository investmentRepository;
     
-    public List<InvestmentDTO> getAllInvestments() {
-        return investmentRepository.findAllByOrderByTimestampDesc()
-                .stream()
-                .map(InvestmentDTO::new)
-                .collect(Collectors.toList());
+    public List<InvestmentDTO> getAllInvestments(User user) {
+        return investmentRepository.findByUserOrderByTimestampDesc(user)
+                .stream().map(InvestmentDTO::new).collect(Collectors.toList());
     }
     
-    public Optional<InvestmentDTO> getInvestmentById(Long id) {
+    public Optional<InvestmentDTO> getInvestmentById(Long id, User user) {
         return investmentRepository.findById(id)
+                .filter(investment -> investment.getUser().equals(user)) // Ensure it belongs to the user
                 .map(InvestmentDTO::new);
     }
-    
-    public InvestmentDTO createInvestment(InvestmentDTO investmentDTO) {
+
+    public InvestmentDTO createInvestment(InvestmentDTO investmentDTO, User user) {
         if (investmentDTO.getAmount() == null || investmentDTO.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount must be greater than 0");
         }
@@ -46,8 +46,9 @@ public class InvestmentService {
         if (investmentDTO.getDate() == null) {
             throw new IllegalArgumentException("Investment date is required");
         }
-        
+
         Investment investment = investmentDTO.toEntity();
+        investment.setUser(user);
         // If timestamp is not provided in DTO, it will be set by the Investment entity's constructor
         if (investmentDTO.getTimestamp() != null) {
             investment.setTimestamp(investmentDTO.getTimestamp());
@@ -57,9 +58,8 @@ public class InvestmentService {
     }
 
     // New method for batch import
-    public List<InvestmentDTO> importInvestments(List<InvestmentDTO> investmentDTOs) {
-        List<Investment> investmentsToSave = new ArrayList<>();
-        for (InvestmentDTO dto : investmentDTOs) {
+    public List<InvestmentDTO> importInvestments(List<InvestmentDTO> investmentDTOs, User user) {
+        List<Investment> investmentsToSave = investmentDTOs.stream().map(dto -> {
             if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("Invalid amount for investment: " + dto.getName());
             }
@@ -70,19 +70,17 @@ public class InvestmentService {
                 throw new IllegalArgumentException("Investment date is required for: " + dto.getName());
             }
             Investment investment = dto.toEntity();
-            // If timestamp is provided in DTO use it, otherwise the entity constructor sets it to now()
+            investment.setUser(user);
             if (dto.getTimestamp() != null) {
                 investment.setTimestamp(dto.getTimestamp());
             } else {
                 investment.setTimestamp(LocalDateTime.now()); // Ensure timestamp if not provided
             }
-            investmentsToSave.add(investment);
-        }
+            return investment;
+        }).collect(Collectors.toList());
         
         List<Investment> savedInvestments = investmentRepository.saveAll(investmentsToSave);
-        return savedInvestments.stream()
-                .map(InvestmentDTO::new)
-                .collect(Collectors.toList());
+        return savedInvestments.stream().map(InvestmentDTO::new).collect(Collectors.toList());
     }
     
     public Optional<InvestmentDTO> updateInvestment(Long id, InvestmentDTO investmentDTO) {
@@ -100,44 +98,44 @@ public class InvestmentService {
                 });
     }
     
-    public boolean deleteInvestment(Long id) {
-        if (investmentRepository.existsById(id)) {
+    public boolean deleteInvestment(Long id, User user) {
+        Optional<Investment> investment = investmentRepository.findById(id);
+        if (investment.isPresent() && investment.get().getUser().equals(user)) {
             investmentRepository.deleteById(id);
             return true;
         }
         return false;
     }
     
-    public void deleteAllInvestments() {
-        investmentRepository.deleteAll();
+    public void deleteAllInvestments(User user) {
+        investmentRepository.deleteByUser(user);
+    }
+
+    public BigDecimal getTotalAmount(User user) {
+        return investmentRepository.getTotalAmount(user).orElse(BigDecimal.ZERO);
     }
     
-    public BigDecimal getTotalAmount() {
-        return investmentRepository.getTotalAmount().orElse(BigDecimal.ZERO);
+    public BigDecimal getAverageAmount(User user) {
+        return investmentRepository.getAverageAmount(user).orElse(BigDecimal.ZERO);
+    }
+
+    public long getTotalCount(User user) {
+        return investmentRepository.countByUser(user);
     }
     
-    public BigDecimal getAverageAmount() {
-        return investmentRepository.getAverageAmount().orElse(BigDecimal.ZERO);
+    public Optional<LocalDate> getLatestInvestmentDate(User user) {
+        return investmentRepository.findLatestInvestment(user).map(Investment::getDate);
     }
-    
-    public long getTotalCount() {
-        return investmentRepository.count();
-    }
-    
-    public Optional<LocalDate> getLatestInvestmentDate() {
-        return investmentRepository.findLatestInvestment()
-                .map(Investment::getDate);
-    }
-    
-    public List<InvestmentDTO> getInvestmentsByDateRange(LocalDate startDate, LocalDate endDate) {
-        return investmentRepository.findByDateBetween(startDate, endDate)
+
+    public List<InvestmentDTO> getInvestmentsByDateRange(User user, LocalDate startDate, LocalDate endDate) {
+        return investmentRepository.findByUserAndDateBetween(user, startDate, endDate)
                 .stream()
                 .map(InvestmentDTO::new)
                 .collect(Collectors.toList());
     }
     
-    public List<InvestmentDTO> searchInvestmentsByName(String name) {
-        return investmentRepository.findByNameContainingIgnoreCase(name)
+    public List<InvestmentDTO> searchInvestmentsByName(User user, String name) {
+        return investmentRepository.findByUserAndNameContainingIgnoreCase(user, name)
                 .stream()
                 .map(InvestmentDTO::new)
                 .collect(Collectors.toList());
