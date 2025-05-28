@@ -56,8 +56,9 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isViewAllModalOpen, setViewAllModalOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   
-  // State for search and sort in the "View All" modal
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'descending' });
 
@@ -150,17 +151,30 @@ function Dashboard() {
     });
     setAddModalOpen(true);
   };
+  
+  const openDeleteModal = (id) => {
+    setDeletingId(id);
+    setDeleteModalOpen(true);
+  };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this investment?')) {
-      try {
-        await api.delete(`/api/investments/${id}`);
-        showStatus('Investment deleted. 🗑️', 'info');
-        await fetchInvestments();
-        await fetchStats();
-      } catch (error) {
-        handleApiError(error, 'Error deleting investment.');
-      }
+  const closeDeleteModal = () => {
+    setDeletingId(null);
+    setDeleteModalOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    setLoading(true);
+    try {
+      await api.delete(`/api/investments/${deletingId}`);
+      showStatus('Investment deleted successfully.', 'info');
+      await fetchInvestments();
+      await fetchStats();
+    } catch (error) {
+      handleApiError(error, 'Error deleting investment.');
+    } finally {
+      setLoading(false);
+      closeDeleteModal();
     }
   };
 
@@ -221,12 +235,10 @@ function Dashboard() {
 
   const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
 
-  // Memoized and sorted investments for the main dashboard view
   const sortedInvestments = useMemo(() => {
       return [...investments].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [investments]);
 
-  // Chart Data Preparation
   const recentForChart = useMemo(() => {
     return [...investments]
         .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -257,7 +269,6 @@ function Dashboard() {
     }
   };
 
-  // Logic for filtering and sorting the "View All" modal list
   const requestSort = (key) => {
     let direction = 'ascending';
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -269,7 +280,6 @@ function Dashboard() {
   const filteredAndSortedInvestments = useMemo(() => {
     let sortableItems = [...investments];
     
-    // Filtering
     if (searchTerm) {
         sortableItems = sortableItems.filter(item => 
             item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -277,7 +287,6 @@ function Dashboard() {
         );
     }
     
-    // Sorting
     sortableItems.sort((a, b) => {
         const aVal = a[sortConfig.key];
         const bVal = b[sortConfig.key];
@@ -307,14 +316,14 @@ function Dashboard() {
         </header>
 
         <main className="main-content">
-          <div id="total-portfolio" className="card">
+           <div id="total-portfolio" className="card">
             <h2><span className="icon">💼</span>Total Portfolio Value</h2>
             <div className="total-amount">{formatCurrency(stats.totalAmount)}</div>
              <div style={{ marginTop: '20px' }}>
                 <p>Quick Actions:</p>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <button type="button" className="btn import-btn" onClick={() => fileInputRef.current.click()} disabled={loading}>
-                        <span>📤</span> {loading ? 'Importing...' : 'Import'}
+                         <span>📤</span> {loading ? 'Importing...' : 'Import'}
                     </button>
                     <input type="file" accept=".csv" style={{ display: 'none' }} ref={fileInputRef} id="csvFileInput"/>
                     <button type="button" className="btn" onClick={exportData}>
@@ -350,8 +359,12 @@ function Dashboard() {
                     <span className="investment-date">{investment.date ? investment.date.split('T')[0] : 'N/A'}</span>
                     <span className="investment-amount-display">{formatCurrency(investment.amount)}</span>
                     <div className="investment-actions">
-                      <button onClick={() => handleEdit(investment)} className="action-btn edit-btn" title="Edit">✏️</button>
-                      <button onClick={() => handleDelete(investment.id)} className="action-btn delete-btn" title="Delete">🗑️</button>
+                        <button onClick={() => handleEdit(investment)} className="action-btn edit-btn" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
+                        </button>
+                        <button onClick={() => openDeleteModal(investment.id)} className="action-btn delete-btn" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
                     </div>
                   </div>
                 ))
@@ -393,17 +406,11 @@ function Dashboard() {
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>All Investments</h2>
-                    <input 
-                        type="text" 
-                        placeholder="Search by name or date..." 
-                        className="form-group-input" 
-                        style={{marginLeft: '20px', width: '300px'}}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                    <input type="text" placeholder="Search by name or date..." className="form-group-input" style={{marginLeft: '20px', width: '300px'}} onChange={(e) => setSearchTerm(e.target.value)} />
                     <button onClick={() => setViewAllModalOpen(false)} className="close-modal-btn" style={{marginLeft: 'auto'}}>×</button>
                 </div>
                 
-                <div className="investments-list-header" style={{display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '20px', padding: '10px 20px', borderBottom: '2px solid #444', fontWeight: 'bold'}}>
+                <div className="investments-list-header">
                     <SortableHeader name="name" sortConfig={sortConfig} requestSort={requestSort}>Name</SortableHeader>
                     <SortableHeader name="category" sortConfig={sortConfig} requestSort={requestSort}>Category</SortableHeader>
                     <SortableHeader name="date" sortConfig={sortConfig} requestSort={requestSort}>Date</SortableHeader>
@@ -420,8 +427,12 @@ function Dashboard() {
                                 <span className="investment-date">{investment.date.split('T')[0]}</span>
                                 <span className="investment-amount-display">{formatCurrency(investment.amount)}</span>
                                 <div className="investment-actions">
-                                    <button onClick={() => { setViewAllModalOpen(false); handleEdit(investment); }} className="action-btn edit-btn" title="Edit">✏️</button>
-                                    <button onClick={() => handleDelete(investment.id)} className="action-btn delete-btn" title="Delete">🗑️</button>
+                                    <button onClick={() => { setViewAllModalOpen(false); handleEdit(investment); }} className="action-btn edit-btn" title="Edit">
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
+                                    </button>
+                                    <button onClick={() => openDeleteModal(investment.id)} className="action-btn delete-btn" title="Delete">
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
                                 </div>
                             </div>
                         ))
@@ -430,6 +441,24 @@ function Dashboard() {
                     )}
                 </div>
             </div>
+        </div>
+      )}
+      
+      {isDeleteModalOpen && (
+        <div className="modal-overlay" onClick={closeDeleteModal}>
+          <div className="modal-content delete-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="icon">!</div>
+            <h3>Confirm Deletion</h3>
+            <p>Are you sure you want to permanently delete this investment? This action cannot be undone.</p>
+            <div className="form-actions">
+              <button type="button" className="btn btn-secondary" onClick={closeDeleteModal} disabled={loading}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-danger" onClick={confirmDelete} disabled={loading}>
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

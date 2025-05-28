@@ -490,3 +490,87 @@ body {
 .comprehensive-list-modal .investment-item:last-child {
     border-bottom: none;
 }
+
+.action-btn {
+  background: #3a3a3a;
+  border: 1px solid #555;
+  cursor: pointer;
+  font-size: 1.3rem; /* Fallback for emoji */
+  padding: 0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  color: #b0b0b0;
+}
+
+.action-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+/* Edit Button Specific Styles */
+.edit-btn:hover {
+  background-color: #4A90E2; /* Blue */
+  border-color: #4A90E2;
+  color: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+/* Delete Button Specific Styles */
+.delete-btn:hover {
+  background-color: #e53935; /* Red */
+  border-color: #e53935;
+  color: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3);
+}
+
+/* New Destructive Action Button Style for Delete Modal */
+.btn-danger {
+  background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+  color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(211, 47, 47, 0.3);
+}
+
+/* Delete Confirmation Modal Specific Styles */
+.delete-modal-content {
+  max-width: 450px;
+  text-align: center;
+}
+
+.delete-modal-content .icon {
+  background: #e53935;
+  color: #fff;
+  width: 50px;
+  height: 50px;
+  font-size: 1.8rem;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+}
+
+.delete-modal-content h3 {
+  font-size: 1.5rem;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.delete-modal-content p {
+  color: #b0b0b0;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.delete-modal-content .form-actions {
+  justify-content: center;
+}
