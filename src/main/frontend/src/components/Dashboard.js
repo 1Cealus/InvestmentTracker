@@ -134,8 +134,6 @@ function Dashboard() {
 
     try {
       if (editingId) {
-        // For simplicity, editing a transaction's core details but not its type from negative to positive.
-        // A more complex system might reverse the old transaction and create a new one.
         await api.put(`/api/investments/${editingId}`, submissionData);
         showStatus('Transaction updated successfully! 🔄', 'success');
       } else {
@@ -156,9 +154,7 @@ function Dashboard() {
     setEditingId(investment.id);
     setFormData({
       ...investment,
-      // Determine transaction type based on amount sign
       transactionType: investment.amount < 0 ? 'Sale' : 'Purchase',
-      // Use absolute value for editing price/quantity
       purchasePrice: Math.abs(investment.purchasePrice) || '',
       quantity: Math.abs(investment.quantity) || '',
       date: investment.date ? investment.date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -255,18 +251,35 @@ function Dashboard() {
       return [...investments].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [investments]);
 
-  const recentForChart = useMemo(() => {
-    return [...investments]
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(-5);
-  }, [investments]);
+  // *** NEW CHART LOGIC STARTS HERE ***
+  const portfolioHistory = useMemo(() => {
+    if (investments.length === 0) {
+      return { labels: [], data: [] };
+    }
+
+    // 1. Sort all transactions by date, ascending
+    const sorted = [...investments].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let runningTotal = 0;
+    const labels = [];
+    const data = [];
+
+    // 2. Iterate through sorted transactions to calculate a running total
+    sorted.forEach(transaction => {
+      runningTotal += transaction.amount;
+      labels.push(transaction.date.split('T')[0]);
+      data.push(runningTotal);
+    });
+
+    return { labels, data };
+  }, [investments]); // This recalculates whenever investments change
 
   const chartData = {
-    labels: recentForChart.map(inv => inv.date.split('T')[0]),
+    labels: portfolioHistory.labels,
     datasets: [
       {
-        label: 'Transaction Amount ($)',
-        data: recentForChart.map(inv => inv.amount),
+        label: 'Total Portfolio Value ($)',
+        data: portfolioHistory.data,
         fill: true,
         backgroundColor: 'rgba(80, 227, 194, 0.2)',
         borderColor: '#50E3C2',
@@ -274,6 +287,7 @@ function Dashboard() {
       },
     ],
   };
+  // *** NEW CHART LOGIC ENDS HERE ***
 
   const chartOptions = {
     responsive: true,
@@ -353,7 +367,7 @@ function Dashboard() {
           </div>
 
           <div id="investment-chart" className="card">
-            <h2><span className="icon">📊</span>Recent Transactions</h2>
+            <h2><span className="icon">📊</span>Portfolio Value Over Time</h2>
             <div style={{ height: '250px' }}>
                 <Line options={chartOptions} data={chartData} />
             </div>
