@@ -251,28 +251,37 @@ function Dashboard() {
       return [...investments].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [investments]);
 
-  // *** NEW CHART LOGIC STARTS HERE ***
+  // *** UPDATED CHART LOGIC TO AGGREGATE BY DAY ***
   const portfolioHistory = useMemo(() => {
     if (investments.length === 0) {
       return { labels: [], data: [] };
     }
 
-    // 1. Sort all transactions by date, ascending
+    // 1. Sort all transactions by date to process them chronologically
     const sorted = [...investments].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    let runningTotal = 0;
-    const labels = [];
-    const data = [];
+    // 2. Aggregate transactions by date
+    const dailyAggregates = sorted.reduce((acc, transaction) => {
+      const date = transaction.date.split('T')[0];
+      // If the date isn't in our accumulator yet, add it with a value of 0
+      if (!acc[date]) {
+        acc[date] = 0;
+      }
+      // Add the current transaction's amount to that day's total
+      acc[date] += transaction.amount;
+      return acc;
+    }, {});
 
-    // 2. Iterate through sorted transactions to calculate a running total
-    sorted.forEach(transaction => {
-      runningTotal += transaction.amount;
-      labels.push(transaction.date.split('T')[0]);
-      data.push(runningTotal);
+    // 3. Calculate the running total from the daily aggregates
+    let runningTotal = 0;
+    const labels = Object.keys(dailyAggregates); // Get the unique, sorted dates
+    const data = labels.map(date => {
+      runningTotal += dailyAggregates[date]; // Add the day's net change to the running total
+      return runningTotal; // This is the portfolio value at the end of the day
     });
 
     return { labels, data };
-  }, [investments]); // This recalculates whenever investments change
+  }, [investments]);
 
   const chartData = {
     labels: portfolioHistory.labels,
@@ -287,7 +296,7 @@ function Dashboard() {
       },
     ],
   };
-  // *** NEW CHART LOGIC ENDS HERE ***
+  // *** END OF UPDATED CHART LOGIC ***
 
   const chartOptions = {
     responsive: true,
