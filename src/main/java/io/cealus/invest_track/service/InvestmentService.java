@@ -35,7 +35,7 @@ public class InvestmentService {
     }
 
     public InvestmentDTO createInvestment(InvestmentDTO investmentDTO, User user) {
-        if (investmentDTO.getAmount() == null || investmentDTO.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (investmentDTO.getAmount() == null || investmentDTO.getAmount().compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalArgumentException("Amount must be greater than 0");
         }
         
