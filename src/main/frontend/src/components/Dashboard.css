@@ -321,25 +321,6 @@ body {
   justify-content: flex-end;
 }
 
-.action-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-  padding: 5px;
-  border-radius: 50%;
-  width: 35px;
-  height: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease, color 0.2s ease;
-  color: #b0b0b0;
-}
-
-.edit-btn:hover { background-color: rgba(74, 144, 226, 0.15); color: #4A90E2; }
-.delete-btn:hover { background-color: rgba(229, 57, 53, 0.15); color: #e53935; }
-
 /* Status Bar & Empty State */
 .status-bar {
   position: fixed;
@@ -479,18 +460,11 @@ body {
 }
 
 /* Applying the same grid layout to the items for alignment */
-.comprehensive-list-modal .investment-item {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
-    align-items: center;
-    border-bottom: 1px solid #383838;
-    padding-top: 15px;
-    padding-bottom: 15px;
-}
 .comprehensive-list-modal .investment-item:last-child {
     border-bottom: none;
 }
 
+/* Modernized Action Buttons */
 .action-btn {
   background: #3a3a3a;
   border: 1px solid #555;
