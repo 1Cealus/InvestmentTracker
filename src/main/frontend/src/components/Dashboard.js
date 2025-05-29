@@ -13,6 +13,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import AnalysisModal from './AnalysisModal'; // ✨ IMPORT THE NEW MODAL
 
 ChartJS.register(
   CategoryScale,
@@ -33,10 +34,9 @@ const initialFormData = {
   purchasePrice: '',
   notes: '',
   amount: '0.00',
-  transactionType: 'Purchase', // New field: Purchase or Sale
+  transactionType: 'Purchase', 
 };
 
-// Helper component for Sortable Table Headers
 const SortableHeader = ({ children, name, sortConfig, requestSort }) => {
     const isSorted = sortConfig.key === name;
     const directionIcon = isSorted ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : '';
@@ -59,6 +59,7 @@ function Dashboard() {
   const [isViewAllModalOpen, setViewAllModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'descending' });
@@ -71,9 +72,8 @@ function Dashboard() {
   useEffect(() => {
     fetchInvestments();
     fetchStats();
-  }, []);
+  }, [fetchInvestments, fetchStats]);
 
-  // Updated useEffect to handle transaction type
   useEffect(() => {
     const { quantity, purchasePrice, transactionType } = formData;
     const q = parseFloat(quantity);
@@ -81,7 +81,6 @@ function Dashboard() {
 
     if (!isNaN(q) && !isNaN(p) && q > 0 && p > 0) {
       const totalAmount = q * p;
-      // Make the amount negative if it's a "Sale"
       const finalAmount = transactionType === 'Sale' ? -totalAmount : totalAmount;
       setFormData(prev => ({ ...prev, amount: finalAmount.toFixed(4) }));
     } else {
@@ -129,7 +128,6 @@ function Dashboard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Ensure amount is a number before sending
     const submissionData = { ...formData, amount: parseFloat(formData.amount) };
 
     try {
@@ -251,44 +249,33 @@ function Dashboard() {
       return [...investments].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [investments]);
 
-  // *** UPDATED CHART LOGIC TO AGGREGATE BY DAY ***
-  const portfolioHistory = useMemo(() => {
+  const portfolioHistoryMainChart = useMemo(() => {
     if (investments.length === 0) {
       return { labels: [], data: [] };
     }
-
-    // 1. Sort all transactions by date to process them chronologically
     const sorted = [...investments].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // 2. Aggregate transactions by date
     const dailyAggregates = sorted.reduce((acc, transaction) => {
       const date = transaction.date.split('T')[0];
-      // If the date isn't in our accumulator yet, add it with a value of 0
-      if (!acc[date]) {
-        acc[date] = 0;
-      }
-      // Add the current transaction's amount to that day's total
+      if (!acc[date]) acc[date] = 0;
       acc[date] += transaction.amount;
       return acc;
     }, {});
 
-    // 3. Calculate the running total from the daily aggregates
     let runningTotal = 0;
-    const labels = Object.keys(dailyAggregates); // Get the unique, sorted dates
+    const labels = Object.keys(dailyAggregates); 
     const data = labels.map(date => {
-      runningTotal += dailyAggregates[date]; // Add the day's net change to the running total
-      return runningTotal; // This is the portfolio value at the end of the day
+      runningTotal += dailyAggregates[date]; 
+      return runningTotal; 
     });
-
     return { labels, data };
   }, [investments]);
 
-  const chartData = {
-    labels: portfolioHistory.labels,
+  const mainChartData = {
+    labels: portfolioHistoryMainChart.labels,
     datasets: [
       {
         label: 'Total Portfolio Value ($)',
-        data: portfolioHistory.data,
+        data: portfolioHistoryMainChart.data,
         fill: true,
         backgroundColor: 'rgba(80, 227, 194, 0.2)',
         borderColor: '#50E3C2',
@@ -296,7 +283,6 @@ function Dashboard() {
       },
     ],
   };
-  // *** END OF UPDATED CHART LOGIC ***
 
   const chartOptions = {
     responsive: true,
@@ -318,27 +304,19 @@ function Dashboard() {
 
   const filteredAndSortedInvestments = useMemo(() => {
     let sortableItems = [...investments];
-    
     if (searchTerm) {
         sortableItems = sortableItems.filter(item => 
             item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.date.split('T')[0].includes(searchTerm)
         );
     }
-    
     sortableItems.sort((a, b) => {
         const aVal = a[sortConfig.key];
         const bVal = b[sortConfig.key];
-
-        if (aVal < bVal) {
-            return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (aVal > bVal) {
-            return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
+        if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
         return 0;
     });
-
     return sortableItems;
   }, [investments, searchTerm, sortConfig]);
 
@@ -368,6 +346,10 @@ function Dashboard() {
                     <button type="button" className="btn" onClick={exportData}>
                         <span>📥</span> Export
                     </button>
+                     {/* ✨ ANALYZE BUTTON ADDED HERE ✨ */}
+                    <button type="button" className="btn analyze-btn" onClick={() => setAnalysisModalOpen(true)}>
+                        <span>🔬</span> Analyze
+                    </button>
                     <button type="button" className="btn clear-btn">
                         <span>🗑️</span> Clear All
                     </button>
@@ -378,7 +360,7 @@ function Dashboard() {
           <div id="investment-chart" className="card">
             <h2><span className="icon">📊</span>Portfolio Value Over Time</h2>
             <div style={{ height: '250px' }}>
-                <Line options={chartOptions} data={chartData} />
+                <Line options={chartOptions} data={mainChartData} />
             </div>
           </div>
 
@@ -452,7 +434,6 @@ function Dashboard() {
                     <input type="text" placeholder="Search by name or date..." className="form-group-input" style={{marginLeft: '20px', width: '300px'}} onChange={(e) => setSearchTerm(e.target.value)} />
                     <button onClick={() => setViewAllModalOpen(false)} className="close-modal-btn" style={{marginLeft: 'auto'}}>×</button>
                 </div>
-                
                 <div className="investments-list-header">
                     <SortableHeader name="name" sortConfig={sortConfig} requestSort={requestSort}>Name</SortableHeader>
                     <SortableHeader name="category" sortConfig={sortConfig} requestSort={requestSort}>Category</SortableHeader>
@@ -460,7 +441,6 @@ function Dashboard() {
                     <span style={{textAlign: 'right'}}><SortableHeader name="amount" sortConfig={sortConfig} requestSort={requestSort}>Amount</SortableHeader></span>
                     <span style={{textAlign: 'right'}}>Actions</span>
                 </div>
-                
                 <div className="investments-list" style={{maxHeight: '60vh', overflowY: 'auto'}}>
                     {filteredAndSortedInvestments.length > 0 ? (
                         filteredAndSortedInvestments.map(investment => (
@@ -503,6 +483,14 @@ function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ✨ RENDER THE NEW MODAL ✨ */}
+      {isAnalysisModalOpen && (
+        <AnalysisModal 
+          investments={investments} 
+          onClose={() => setAnalysisModalOpen(false)} 
+        />
       )}
 
       {statusMessage && (<div className={`status-bar show ${statusMessage.type}`}>{statusMessage.text}</div>)}
