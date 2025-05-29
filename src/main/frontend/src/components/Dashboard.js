@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'; // Added useCallback
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './Dashboard.css';
@@ -13,7 +13,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import AnalysisModal from './AnalysisModal'; // ✨ IMPORT THE NEW MODAL
+import AnalysisModal from './AnalysisModal';
 
 ChartJS.register(
   CategoryScale,
@@ -34,7 +34,7 @@ const initialFormData = {
   purchasePrice: '',
   notes: '',
   amount: '0.00',
-  transactionType: 'Purchase', 
+  transactionType: 'Purchase',
 };
 
 const SortableHeader = ({ children, name, sortConfig, requestSort }) => {
@@ -46,7 +46,6 @@ const SortableHeader = ({ children, name, sortConfig, requestSort }) => {
         </button>
     );
 };
-
 
 function Dashboard() {
   const [investments, setInvestments] = useState([]);
@@ -69,11 +68,51 @@ function Dashboard() {
 
   const categories = ['Stocks', 'Crypto', 'Mutual Funds', 'Bonds', 'Real Estate', 'Other'];
 
+  const showStatus = useCallback((message, type = 'info') => {
+    setStatusMessage({ text: message, type });
+    setTimeout(() => setStatusMessage(''), 4000);
+  }, []); // setStatusMessage is stable
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  }, [navigate]); // navigate is stable
+
+  const handleApiError = useCallback((error, defaultMessage) => {
+    console.error(defaultMessage, error);
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      showStatus('Your session has expired. Please log in again.', 'error');
+      setTimeout(handleLogout, 2000);
+    } else {
+      showStatus(error.response?.data?.error || defaultMessage, 'error');
+    }
+  }, [showStatus, handleLogout]);
+
+  const fetchInvestments = useCallback(async () => {
+    try {
+      const response = await api.get('/api/investments');
+      setInvestments(response.data);
+    } catch (error) {
+      handleApiError(error, 'Error loading investments.');
+    }
+  }, [handleApiError]); // Depends on handleApiError
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await api.get('/api/investments/stats');
+      setStats(response.data);
+    } catch (error) {
+      handleApiError(error, 'Error fetching stats.');
+    }
+  }, [handleApiError]); // Depends on handleApiError
+  
+  // useEffect at original line 75
   useEffect(() => {
     fetchInvestments();
     fetchStats();
-  }, [fetchInvestments, fetchStats]);
+  }, [fetchInvestments, fetchStats]); // Now using memoized functions
 
+  // useEffect at original line 89
   useEffect(() => {
     const { quantity, purchasePrice, transactionType } = formData;
     const q = parseFloat(quantity);
@@ -86,35 +125,7 @@ function Dashboard() {
     } else {
       setFormData(prev => ({ ...prev, amount: '0.00' }));
     }
-  }, [formData.quantity, formData.purchasePrice, formData.transactionType]);
-
-  const fetchInvestments = async () => {
-    try {
-      const response = await api.get('/api/investments');
-      setInvestments(response.data);
-    } catch (error) {
-      handleApiError(error, 'Error loading investments.');
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await api.get('/api/investments/stats');
-      setStats(response.data);
-    } catch (error) {
-      handleApiError(error, 'Error fetching stats.');
-    }
-  };
-
-  const handleApiError = (error, defaultMessage) => {
-    console.error(defaultMessage, error);
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      showStatus('Your session has expired. Please log in again.', 'error');
-      setTimeout(handleLogout, 2000);
-    } else {
-      showStatus(error.response?.data?.error || defaultMessage, 'error');
-    }
-  };
+  }, [formData]); // ESLint prefers the whole object if destructuring inside
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -124,6 +135,13 @@ function Dashboard() {
   const handleTransactionTypeChange = (type) => {
     setFormData(prev => ({...prev, transactionType: type}));
   };
+
+  const closeAddModal = useCallback(() => {
+    setAddModalOpen(false);
+    setEditingId(null);
+    setFormData(initialFormData);
+  }, []); // Relies only on setters and initialFormData (constant)
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -138,11 +156,11 @@ function Dashboard() {
         await api.post('/api/investments', submissionData);
         showStatus('Transaction added successfully! 🎉', 'success');
       }
-      closeAddModal();
-      await fetchInvestments();
-      await fetchStats();
+      closeAddModal(); // This is now memoized
+      await fetchInvestments(); // This is now memoized
+      await fetchStats(); // This is now memoized
     } catch (error) {
-      handleApiError(error, 'Failed to save transaction.');
+      handleApiError(error, 'Failed to save transaction.'); // Memoized
     } finally {
       setLoading(false);
     }
@@ -167,24 +185,24 @@ function Dashboard() {
     setDeleteModalOpen(true);
   };
 
-  const closeDeleteModal = () => {
+  const closeDeleteModal = useCallback(() => {
     setDeletingId(null);
     setDeleteModalOpen(false);
-  };
+  }, []); // Relies only on setters
 
   const confirmDelete = async () => {
     if (!deletingId) return;
     setLoading(true);
     try {
       await api.delete(`/api/investments/${deletingId}`);
-      showStatus('Transaction deleted successfully.', 'info');
-      await fetchInvestments();
-      await fetchStats();
+      showStatus('Transaction deleted successfully.', 'info'); // Memoized
+      await fetchInvestments(); // Memoized
+      await fetchStats(); // Memoized
     } catch (error) {
-      handleApiError(error, 'Error deleting transaction.');
+      handleApiError(error, 'Error deleting transaction.'); // Memoized
     } finally {
       setLoading(false);
-      closeDeleteModal();
+      closeDeleteModal(); // Memoized
     }
   };
 
@@ -193,28 +211,13 @@ function Dashboard() {
     setFormData(initialFormData);
     setAddModalOpen(true);
   };
-
-  const closeAddModal = () => {
-    setAddModalOpen(false);
-    setEditingId(null);
-    setFormData(initialFormData);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
-  const showStatus = (message, type = 'info') => {
-    setStatusMessage({ text: message, type });
-    setTimeout(() => setStatusMessage(''), 4000);
-  };
   
-  const exportData = () => {
+  const exportData = useCallback(() => {
     if (investments.length === 0) {
-      showStatus('No data to export', 'error');
+      showStatus('No data to export', 'error'); // Memoized
       return;
     }
+    // ... rest of exportData logic (it doesn't depend on component state that changes often)
     const headers = ['id', 'name', 'date', 'category', 'symbol', 'quantity', 'purchasePrice', 'amount', 'notes'];
     const csvContent = [
       headers.join(','),
@@ -240,8 +243,8 @@ function Dashboard() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showStatus('Data exported successfully! 📁', 'success');
-  };
+    showStatus('Data exported successfully! 📁', 'success'); // Memoized
+  }, [investments, showStatus]); // Depends on investments and memoized showStatus
 
   const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
 
@@ -294,13 +297,15 @@ function Dashboard() {
     }
   };
 
-  const requestSort = (key) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-        direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
+  const requestSort = useCallback((key) => {
+    setSortConfig((prevSortConfig) => {
+        let direction = 'ascending';
+        if (prevSortConfig.key === key && prevSortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        return { key, direction };
+    });
+  }, []); // setSortConfig is stable
 
   const filteredAndSortedInvestments = useMemo(() => {
     let sortableItems = [...investments];
@@ -310,13 +315,15 @@ function Dashboard() {
             item.date.split('T')[0].includes(searchTerm)
         );
     }
-    sortableItems.sort((a, b) => {
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
-        if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
-        return 0;
-    });
+    if (sortConfig.key) { // Ensure sortConfig.key is not null
+        sortableItems.sort((a, b) => {
+            const aVal = a[sortConfig.key];
+            const bVal = b[sortConfig.key];
+            if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+        });
+    }
     return sortableItems;
   }, [investments, searchTerm, sortConfig]);
 
@@ -346,7 +353,6 @@ function Dashboard() {
                     <button type="button" className="btn" onClick={exportData}>
                         <span>📥</span> Export
                     </button>
-                     {/* ✨ ANALYZE BUTTON ADDED HERE ✨ */}
                     <button type="button" className="btn analyze-btn" onClick={() => setAnalysisModalOpen(true)}>
                         <span>🔬</span> Analyze
                     </button>
@@ -485,7 +491,6 @@ function Dashboard() {
         </div>
       )}
 
-      {/* ✨ RENDER THE NEW MODAL ✨ */}
       {isAnalysisModalOpen && (
         <AnalysisModal 
           investments={investments} 
